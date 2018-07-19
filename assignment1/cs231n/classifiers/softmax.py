@@ -30,16 +30,24 @@ def softmax_loss_naive(W, X, y, reg):
     # here, it is easy to run into numeric instability. Don't forget the        #
     # regularization!                                                           #
     #############################################################################
-    num_classes = W.shape[1]
-    num_train = X.shape[0]
+    C = W.shape[1]
+    D = W.shape[0]
+    N = X.shape[0]
     scores = np.dot(X, W)
     unnormalized_proba = np.exp(scores)
-    norm_by_row = np.sum(unnormalized_proba, axis=1)
-    print(unnormalized_proba.shape, norm_by_row.shape)
+    norm_by_row = np.sum(unnormalized_proba, axis=1).reshape(-1, 1)
     normalized_proba = unnormalized_proba / norm_by_row
-    for i in range(num_train):
-        for j in range(num_classes):
-            loss += X[i, j]
+    for i in range(N):
+        for j in range(C):
+            loss += -np.log(normalized_proba[i, j]) if j == y[i] else 0
+
+    for i in range(C):
+        for j in range(D):
+            # этот цикл перемножает строку на столбец
+            for k in range(N):
+                dW[j, i] += (normalized_proba[k, i] - 1 if j == y[k] else 0) * X[k, j]
+
+    loss = loss / N + reg * (W * W).sum()
     #############################################################################
     #                          END OF YOUR CODE                                 #
     #############################################################################
@@ -63,7 +71,19 @@ def softmax_loss_vectorized(W, X, y, reg):
     # here, it is easy to run into numeric instability. Don't forget the        #
     # regularization!                                                           #
     #############################################################################
-    pass
+    C, D = W.shape
+    N = X.shape[0]
+    scores = np.dot(X, W)
+    unnormalized_proba = np.exp(scores)
+    norm_by_row = np.sum(unnormalized_proba, axis=1).reshape(-1, 1)
+    normalized_proba = unnormalized_proba / norm_by_row
+    loss = normalized_proba.mean() + reg * (W * W).sum()
+    # градиент
+    y_one_hot = np.zeros([N, C])
+    for i in range(y.size):
+        y_one_hot[i, y[i]] = 1
+    diff = (normalized_proba - y_one_hot).T
+    dW = X.dot(diff)
     #############################################################################
     #                          END OF YOUR CODE                                 #
     #############################################################################
